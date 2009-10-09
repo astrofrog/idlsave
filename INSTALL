@@ -1,0 +1,12 @@
+INTRODUCTION
+
+  IDLSave requires Numpy to be installed
+
+INSTALLING
+
+  To install IDLSave, you can run
+
+    python setup.py install
+
+  IDLSave is written in pure python code, so that no compiler is required
+
