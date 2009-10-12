@@ -29,6 +29,15 @@ dtype_dict[14] = '>i8'
 dtype_dict[15] = '>u8'
 
 
+try:
+    test = bin(1)
+except:
+
+    def bin(n, count=8):
+        """returns the binary of integer n, using count number of digits"""
+        return "".join([str((n >> y) & 1) for y in range(count-1, -1, -1)])
+
+
 def align_32(f):
     pos = f.tell()
     if pos % 4 <> 0:
