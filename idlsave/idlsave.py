@@ -23,19 +23,12 @@ dtype_dict[2] = '>i2'
 dtype_dict[3] = '>i4'
 dtype_dict[4] = '>f4'
 dtype_dict[5] = '>f8'
+dtype_dict[7] = '|O'
+dtype_dict[8] = '|O'
 dtype_dict[12] = '>u2'
 dtype_dict[13] = '>u4'
 dtype_dict[14] = '>i8'
 dtype_dict[15] = '>u8'
-
-
-try:
-    test = bin(1)
-except:
-
-    def bin(n, count=8):
-        """returns the binary of integer n, using count number of digits"""
-        return "".join([str((n >> y) & 1) for y in range(count-1, -1, -1)])
 
 
 def align_32(f):
@@ -58,7 +51,7 @@ def read_long(f):
 
 
 def read_int16(f):
-    return struct.unpack('>h', f.read(4)[0:2])[0]
+    return struct.unpack('>h', f.read(4)[2:4])[0]
 
 
 def read_int32(f):
@@ -70,7 +63,7 @@ def read_int64(f):
 
 
 def read_uint16(f):
-    return struct.unpack('>H', f.read(4)[0:2])[0]
+    return struct.unpack('>H', f.read(4)[2:4])[0]
 
 
 def read_uint32(f):
@@ -170,49 +163,51 @@ def read_structure(f, array_desc, struct_desc):
     ncols = struct_desc.ntags
     columns = struct_desc.tagtable
 
-    structure = {}
+    names = []
+    types = []
     for col in columns:
-        structure[col.name] = []
+        names.append(col.name)
+        if col.structure or col.array:
+            types.append(np.object_)
+        else:
+            if col.typecode in dtype_dict:
+                types.append(dtype_dict[col.typecode])
+            else:
+                raise Exception("Variable type %i not implemented" %
+                                                            col.typecode)
+
+    structure = np.recarray((nrows, ), dtype=zip(names, types))
 
     for i in range(nrows):
-        row = []
         for col in columns:
             dtype = col.typecode
             if col.structure:
-                data = read_structure(f, struct_desc.arrtable[col.name], \
-                                        struct_desc.structtable[col.name])
+                structure[col.name][i] = read_structure(f, \
+                                            struct_desc.arrtable[col.name], \
+                                            struct_desc.structtable[col.name])
             elif col.array:
-                data = read_array(f, dtype, struct_desc.arrtable[col.name])
+                structure[col.name][i] = read_array(f, dtype, \
+                                            struct_desc.arrtable[col.name])
             else:
-                data = read_data(f, dtype)
-            structure[col.name].append(data)
-
-    for col in columns:
-        if col.scalar and not col.structure and not col.array:
-            structure[col.name] = np.array(structure[col.name], \
-                                    dtype=dtype_dict[col.typecode])
-
-        # can also convert string columns and columns of numerical arrays
+                structure[col.name][i] = read_data(f, dtype)
 
     return structure
 
 
 def read_array(f, typecode, array_desc):
 
-    if typecode in dtype_dict:
+    if typecode in [1, 3, 4, 5, 13, 14, 15]:
 
         # Read bytes as numpy array
         array = np.fromstring(f.read(array_desc.nbytes), \
                                 dtype=dtype_dict[typecode])
 
-        # Go to next alignment position
-        align_32(f)
+    elif typecode in [2, 12]:
 
-        # Reshape array if needed
-        if array_desc.ndims > 1:
-            dims = array_desc.dims[:array_desc.ndims]
-            dims.reverse()
-            array = array.reshape(dims)
+        # These are 2 byte types, need to skip every two as they are not packed
+
+        array = np.fromstring(f.read(array_desc.nbytes*2), \
+                                dtype=dtype_dict[typecode])[1::2]
 
     else:
 
@@ -222,6 +217,17 @@ def read_array(f, typecode, array_desc):
             dtype = typecode
             data = read_data(f, dtype)
             array.append(data)
+
+        array = np.array(array, dtype=np.object_)
+
+    # Reshape array if needed
+    if array_desc.ndims > 1:
+        dims = array_desc.dims[:array_desc.ndims]
+        dims.reverse()
+        array = array.reshape(dims)
+
+    # Go to next alignment position
+    align_32(f)
 
     return array
 
@@ -384,13 +390,13 @@ class TypeDesc(object):
     def read(self, f):
 
         self.typecode = read_long(f)
-        self.varflags = bin(read_long(f))
+        self.varflags = read_long(f)
 
-        if self.varflags[-2] == '1': # system variable
+        if self.varflags & 2 == 2:
             raise Exception("System variables not implemented")
 
-        self.array = len(self.varflags) >= 3 and self.varflags[-3] == '1'
-        self.structure = len(self.varflags) >= 6 and self.varflags[-6] == '1'
+        self.array = self.varflags & 4 == 4
+        self.structure = self.varflags & 32 == 32
 
         # CHECK VARFLAGS HERE TO SEE IF ARRAY
 
@@ -487,10 +493,10 @@ class TagDesc(object):
 
         self.offset = read_long(f)
         self.typecode = read_long(f)
-        tagflags = bin(read_long(f))
+        tagflags = read_long(f)
 
-        self.array = len(tagflags) >= 3 and tagflags[-3] == '1'
-        self.structure = len(tagflags) >= 6 and tagflags[-6] == '1'
+        self.array = tagflags & 4 == 4
+        self.structure = tagflags & 32 == 32
         self.scalar = self.typecode in dtype_dict
         # Assume '10'x is scalar
 
@@ -525,7 +531,7 @@ class IDLSaveFile(object):
             self.records.append(r)
             rectypes.append(r.rectype)
             if r.rectype == "VARIABLE":
-                self.variables[r.varname] = r.data
+                self.variables[r.varname.lower()] = r.data
             if r.end:
                 break
 
@@ -555,7 +561,13 @@ class IDLSaveFile(object):
 
     def __call__(self, key):
         if key in self.variables:
-            return self.variables[key]
+            return self.variables[key.lower()]
+        else:
+            raise Exception("No such variable: %s" % key)
+            
+    def __getitem__(self, key):
+        if key in self.variables:
+            return self.variables[key.lower()]
         else:
             raise Exception("No such variable: %s" % key)
 
