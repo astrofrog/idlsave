@@ -163,20 +163,18 @@ def read_structure(f, array_desc, struct_desc):
     ncols = struct_desc.ntags
     columns = struct_desc.tagtable
 
-    names = []
-    types = []
+    dtype = []
     for col in columns:
-        names.append(col.name)
         if col.structure or col.array:
-            types.append(np.object_)
+            dtype.append(((col.name.lower(),col.name), np.object_))
         else:
             if col.typecode in dtype_dict:
-                types.append(dtype_dict[col.typecode])
+                dtype.append(((col.name.lower(),col.name), dtype_dict[col.typecode]))
             else:
                 raise Exception("Variable type %i not implemented" %
                                                             col.typecode)
 
-    structure = np.recarray((nrows, ), dtype=zip(names, types))
+    structure = np.recarray((nrows, ), dtype=dtype)
 
     for i in range(nrows):
         for col in columns:
@@ -564,13 +562,18 @@ class IDLSaveFile(object):
             return self.variables[key.lower()]
         else:
             raise Exception("No such variable: %s" % key)
-            
+
     def __getitem__(self, key):
         if key in self.variables:
             return self.variables[key.lower()]
         else:
             raise Exception("No such variable: %s" % key)
 
+    def __getattr__(self,key):
+        if key in self.variables:
+            return self.variables[key.lower()]
+        else:
+            raise AttributeError(attribute)
 
 def read(filename, verbose=True):
     s = IDLSaveFile(filename)
