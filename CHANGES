@@ -1,11 +1,19 @@
 CHANGES
 
-  Version 0.9.1 (in progress)
+  Version 0.9.1
 
     - Structures are now converted to Numpy recarrays
-    - Removed dependency on bin() function
-    - Variable names are case-insensitive
-    - Added __getitem__
+
+    - Removed dependency on intrinsic bin() function, which
+      caused the module to only be compatible with Python 2.6
+
+    - Variable names are now case-insensitive
+
+    - Variables can now be access as attributes, e.g.:
+        s.variable_name
+
+    - Recarray fields can be accessed in lowercase, e.g.:
+        s.variable_name.field_name
 
   Version 0.9.0
 
