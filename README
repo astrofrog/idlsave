@@ -3,7 +3,8 @@ INTRODUCTION
   IDLSave is a pure python module to import variables from IDL 'save' files
   (e.g. .sav) into python, and does not require IDL to work. It has a very
   simple command-line interface, and converts all IDL variables to python
-  types, including Numpy arrays whenever possible.
+  types. Arrays are converted to Numpy arrays, and Structures are converted to
+  Numpy record arrays.
 
   The following example demonstrates how to read a .sav file into python.
   This is done using the idlsave.read method, which returns an IDLSaveFile
@@ -13,14 +14,14 @@ INTRODUCTION
     s = idlsave.read('myidlfile.sav')
 
   This will print out a list of the contents of the IDL save file, including
-  variable names. To access a variable named MYDATA, simply use:
+  variable names. To access a variable named 'mydata', simply use:
 
-    s('MYDATA')
+    s.mydata
 
-  IDL Structures are converted to dictionaries. To access a given field in a
+  IDL Structures are converted to recarrays. To access a given field in a
   structure, use
 
-    s('MYDATA')['FIELD_NAME']
+    s.mydata.field_name
 
 NOTES
 
