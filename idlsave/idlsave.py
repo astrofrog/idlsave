@@ -18,7 +18,7 @@ import struct
 import numpy as np
 
 dtype_dict = {}
-dtype_dict[1] = '>b1'
+dtype_dict[1] = '>u1'
 dtype_dict[2] = '>i2'
 dtype_dict[3] = '>i4'
 dtype_dict[4] = '>f4'
@@ -44,6 +44,10 @@ def skip_bytes(f, n):
 
 def read_bytes(f, n):
     return f.read(n)
+
+
+def read_byte(f):
+    return struct.unpack('>B', f.read(4)[0])[0]
 
 
 def read_long(f):
@@ -123,8 +127,9 @@ def read_string_data(f):
 
 def read_data(f, dtype):
     if dtype==1:
-        return read_bytes(f, 1)
-        skip_bytes(f, 3)
+        if read_int32(f) <> 1:
+            raise Exception("Error occured while reading byte variable")
+        return read_byte(f)
     elif dtype==2:
         return read_int16(f)
     elif dtype==3:
@@ -166,10 +171,11 @@ def read_structure(f, array_desc, struct_desc):
     dtype = []
     for col in columns:
         if col.structure or col.array:
-            dtype.append(((col.name.lower(),col.name), np.object_))
+            dtype.append(((col.name.lower(), col.name), np.object_))
         else:
             if col.typecode in dtype_dict:
-                dtype.append(((col.name.lower(),col.name), dtype_dict[col.typecode]))
+                dtype.append(((col.name.lower(), col.name),
+                                    dtype_dict[col.typecode]))
             else:
                 raise Exception("Variable type %i not implemented" %
                                                             col.typecode)
@@ -195,6 +201,11 @@ def read_structure(f, array_desc, struct_desc):
 def read_array(f, typecode, array_desc):
 
     if typecode in [1, 3, 4, 5, 13, 14, 15]:
+
+        if typecode == 1:
+            nbytes = read_int32(f)
+            if nbytes <> array_desc.nbytes:
+                raise Exception("Error occured while reading byte array")
 
         # Read bytes as numpy array
         array = np.fromstring(f.read(array_desc.nbytes), \
@@ -569,11 +580,12 @@ class IDLSaveFile(object):
         else:
             raise Exception("No such variable: %s" % key)
 
-    def __getattr__(self,key):
+    def __getattr__(self, key):
         if key in self.variables:
             return self.variables[key.lower()]
         else:
             raise AttributeError(attribute)
+
 
 def read(filename, verbose=True):
     s = IDLSaveFile(filename)
