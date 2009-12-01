@@ -85,6 +85,13 @@ def read_float32(f):
 def read_float64(f):
     return struct.unpack('>d', f.read(8))[0]
 
+
+class Pointer(object):
+
+    def __init__(self, index):
+        self.index = index
+        return
+
 rectype_dict = {}
 rectype_dict[0] = "START_MARKER"
 rectype_dict[1] = "COMMON_VARIABLE"
@@ -147,7 +154,7 @@ def read_data(f, dtype):
     elif dtype==9:
         raise Exception("32-bit complex type not implemented")
     elif dtype==10:
-        raise Exception("Heap pointer type not implemented")
+        return Pointer(read_int32(f))
     elif dtype==11:
         raise Exception("Object reference type not implemented")
     elif dtype==12:
@@ -266,9 +273,14 @@ class Record(object):
 
         self.rectype = rectype_dict[self.rectype]
 
-        if self.rectype == "VARIABLE": # or self.rectype == "SYSTEM_VARIABLE":
+        if self.rectype in ["VARIABLE", "HEAP_DATA"]:
 
-            self.varname = read_string(f)
+            if self.rectype == "VARIABLE":
+                self.varname = read_string(f)
+            else:
+                self.heap_index = read_long(f)
+                skip_bytes(f, 4)
+
             self.rectypedesc = TypeDesc().read(f)
 
             varstart = read_long(f)
@@ -338,8 +350,7 @@ class Record(object):
 
         else:
 
-            raise Exception("RECTYPE=%s not implemented" % \
-                                rectype_dict[self.rectype])
+            raise Exception("RECTYPE=%s not implemented" % self.rectype)
 
         f.seek(self.nextrec)
 
@@ -539,12 +550,22 @@ class IDLSaveFile(object):
             r = Record().read(f)
             self.records.append(r)
             rectypes.append(r.rectype)
-            if r.rectype == "VARIABLE":
-                self.variables[r.varname.lower()] = r.data
             if r.end:
                 break
 
         f.close()
+
+        # Find heap data variables
+        heap = {}
+        for r in self.records:
+            if r.rectype == "HEAP_DATA":
+                heap[r.heap_index] = r.data
+
+        for r in self.records:
+            if r.rectype == "VARIABLE":
+                while isinstance(r.data, Pointer):
+                    r.data = heap[r.data.index]
+                self.variables[r.varname.lower()] = r.data
 
         if verbose:
 
@@ -569,22 +590,22 @@ class IDLSaveFile(object):
                 print "-"*50
 
     def __call__(self, key):
-        if key in self.variables:
+        if key.lower() in self.variables:
             return self.variables[key.lower()]
         else:
             raise Exception("No such variable: %s" % key)
 
     def __getitem__(self, key):
-        if key in self.variables:
+        if key.lower() in self.variables:
             return self.variables[key.lower()]
         else:
             raise Exception("No such variable: %s" % key)
 
     def __getattr__(self, key):
-        if key in self.variables:
+        if key.lower() in self.variables:
             return self.variables[key.lower()]
         else:
-            raise AttributeError(attribute)
+            raise Exception("No such variable: %s" % key)
 
 
 def read(filename, verbose=True):
