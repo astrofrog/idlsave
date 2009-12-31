@@ -471,7 +471,7 @@ class StructDesc(object):
         self.ntags = read_long(f)
         self.nbytes = read_long(f)
 
-        if self.predef == 8:
+        if self.predef & 1 == 0:
 
             self.tagtable = []
             for t in range(self.ntags):

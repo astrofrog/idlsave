@@ -1,5 +1,13 @@
 CHANGES
 
+  Version 0.9.4 (current)
+  
+    - Fixed PREDEF for structures
+
+  Version 0.9.3
+
+    - Implemented IDL pointers
+
   Version 0.9.2
 
     - Fixed reading in of byte scalars and arrays
