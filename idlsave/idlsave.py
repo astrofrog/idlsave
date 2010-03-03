@@ -549,7 +549,7 @@ class IDLSaveFile(object):
             print "IDL Save file is compressed"
 
             if uncompressed_filename:
-                fout = file(uncompressed_filename, 'wb')
+                fout = file(uncompressed_filename, 'w+b')
             else:
                 fout = tempfile.NamedTemporaryFile(suffix='.sav')
 
@@ -597,13 +597,8 @@ class IDLSaveFile(object):
             # Close the original compressed file
             f.close()
 
-            if uncompressed_filename:
-                fout.close()
-                f = file(uncompressed_filename, 'rb')
-            else:
-                # Set f to be the decompressed file, and skip the first four bytes
-                f = fout
-
+            # Set f to be the decompressed file, and skip the first four bytes
+            f = fout
             f.seek(4)
 
         else:
