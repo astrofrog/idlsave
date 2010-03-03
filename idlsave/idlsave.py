@@ -597,8 +597,13 @@ class IDLSaveFile(object):
             # Close the original compressed file
             f.close()
 
-            # Set f to be the decompressed file, and skip the first four bytes
-            f = fout
+            if uncompressed_filename:
+                fout.close()
+                f = file(uncompressed_filename, 'rb')
+            else:
+                # Set f to be the decompressed file, and skip the first four bytes
+                f = fout
+
             f.seek(4)
 
         else:
