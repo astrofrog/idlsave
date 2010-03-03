@@ -528,7 +528,7 @@ class IDLSaveFile(object):
         self.variables = None
         self.filename = filename
 
-    def parse(self, verbose=True):
+    def parse(self, verbose=True, uncompressed_filename=None):
 
         self.records = []
         self.variables = {}
@@ -548,8 +548,11 @@ class IDLSaveFile(object):
 
             print "IDL Save file is compressed"
 
-            # Make temporary file to expand uncompressed save file
-            fout = tempfile.NamedTemporaryFile(suffix='.sav')
+            if uncompressed_filename:
+                fout = file(uncompressed_filename, 'wb')
+            else:
+                fout = tempfile.NamedTemporaryFile(suffix='.sav')
+
             print " -> expanding to %s" % fout.name
 
             # Write header
@@ -664,7 +667,25 @@ class IDLSaveFile(object):
             raise Exception("No such variable: %s" % key)
 
 
-def read(filename, verbose=True):
+def read(filename, verbose=True, uncompressed_filename=None):
+    '''
+    Read an IDL .sav file
+
+    Required Arguments:
+
+        *verbose*: [ True | False ]
+            Whether to print out information about the save file, including
+            the records read, and available variables.
+
+        *uncompressed_filename*: [ None | str ]
+            This option is only effective for .sav files written with the
+            /COMPRESS option. If a string is specified, compressed .sav files
+            are uncompressed to this filename. If None is specified, idlsave
+            will use the tempfile module to determine a temporary filename
+            automatically, and will remove the temporary file upon
+            successfully reading it in.
+    '''
+
     s = IDLSaveFile(filename)
-    s.parse(verbose=verbose)
+    s.parse(verbose=verbose, uncompressed_filename=uncompressed_filename)
     return s
