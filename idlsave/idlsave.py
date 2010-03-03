@@ -16,6 +16,8 @@
 
 import struct
 import numpy as np
+import tempfile
+import zlib
 
 dtype_dict = {}
 dtype_dict[1] = '>u1'
@@ -260,11 +262,7 @@ class Record(object):
         self.rectype = read_long(f)
 
         self.nextrec = read_uint32(f)
-
-        if self.nextrec < self.recpos:
-            self.nextrec = self.nextrec + read_uint32(f) * 2**32
-        else:
-            skip_bytes(f, 4)
+        self.nextrec += read_uint32(f) * 2**32
 
         skip_bytes(f, 4)
 
@@ -542,7 +540,65 @@ class IDLSaveFile(object):
             raise Exception("Invalid SIGNATURE: %s" % signature)
 
         recfmt = read_bytes(f, 2)
-        if recfmt <> '\x00\x04':
+
+        if recfmt == '\x00\x04':
+            pass
+
+        elif recfmt == '\x00\x06':
+
+            print "IDL Save file is compressed"
+
+            # Make temporary file to expand uncompressed save file
+            fout = tempfile.NamedTemporaryFile(suffix='.sav')
+            print " -> expanding to %s" % fout.name
+
+            # Write header
+            fout.write('SR\x00\x04')
+
+            # Cycle through records
+            while True:
+
+                # Read record type
+                rectype = read_long(f)
+                fout.write(struct.pack('>l', rectype))
+
+                # Read position of next record and return as int
+                nextrec = read_uint32(f)
+                nextrec += read_uint32(f) * 2**32
+
+                # Read the unknown 4 bytes
+                unknown = f.read(4)
+
+                # Check if the end of the file has been reached
+                if rectype_dict[rectype] == 'END_MARKER':
+                    fout.write(struct.pack('>I', nextrec % 2**32))
+                    fout.write(struct.pack('>I', (nextrec - (nextrec % 2**32)) / 2**32))
+                    fout.write(unknown)
+                    break
+
+                # Find current position
+                pos = f.tell()
+
+                # Decompress record
+                string = zlib.decompress(f.read(nextrec-pos))
+
+                # Find new position of next record
+                nextrec = fout.tell() + len(string) + 12
+
+                # Write out record
+                fout.write(struct.pack('>I', nextrec % 2**32))
+                fout.write(struct.pack('>I', (nextrec - (nextrec % 2**32)) / 2**32))
+                fout.write(unknown)
+                fout.write(string)
+
+            # Close the original compressed file
+            f.close()
+
+            # Set f to be the decompressed file, and skip the first four bytes
+            f = fout
+            f.seek(4)
+
+        else:
             raise Exception("Invalid RECFMT: %s" % recfmt)
 
         rectypes = []
