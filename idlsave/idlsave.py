@@ -18,6 +18,7 @@ import struct
 import numpy as np
 import tempfile
 import zlib
+import warnings
 
 dtype_dict = {}
 dtype_dict[1] = '>u1'
@@ -436,19 +437,46 @@ class ArrayDesc(object):
 
         self.arrstart = read_long(f)
 
-        skip_bytes(f, 4)
+        if self.arrstart == 8:
 
-        self.nbytes = read_long(f)
-        self.nelements = read_long(f)
-        self.ndims = read_long(f)
+            skip_bytes(f, 4)
 
-        skip_bytes(f, 8)
+            self.nbytes = read_long(f)
+            self.nelements = read_long(f)
+            self.ndims = read_long(f)
 
-        self.nmax = read_long(f)
+            skip_bytes(f, 8)
 
-        self.dims = []
-        for d in range(self.nmax):
-            self.dims.append(read_long(f))
+            self.nmax = read_long(f)
+
+            self.dims = []
+            for d in range(self.nmax):
+                self.dims.append(read_long(f))
+
+        elif self.arrstart == 18:
+
+            warnings.warn("Using experimental 64-bit array read")
+
+            skip_bytes(f, 8)
+
+            self.nbytes = read_uint64(f)
+            self.nelements = read_uint64(f)
+            self.ndims = read_long(f)
+
+            skip_bytes(f, 8)
+
+            self.nmax = 8
+
+            self.dims = []
+            for d in range(self.nmax):
+                v = read_long(f)
+                if v <> 0:
+                    raise Exception("Expected a zero in ARRAY_DESC")
+                self.dims.append(read_long(f))
+
+        else:
+
+            raise Exception("Unknown ARRSTART: %i" % self.arrstart)
 
         return self
 
@@ -510,6 +538,10 @@ class TagDesc(object):
     def read(self, f):
 
         self.offset = read_long(f)
+
+        if self.offset == -1:
+            self.offset = read_uint64(f)
+
         self.typecode = read_long(f)
         tagflags = read_long(f)
 
