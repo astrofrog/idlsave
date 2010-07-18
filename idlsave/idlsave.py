@@ -1,18 +1,27 @@
 # IDLSave - a python module to read IDL 'save' files
-# Copyright (C) 2009 Thomas P. Robitaille
+# Copyright (c) 2010 Thomas P. Robitaille
+
+# This code was developed by with permission from ITT Visual Information Systems.
+# IDL(r) is a registered trademark of ITT Visual Information Systems, Inc. for
+# their Interactive Data Language software.
+
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
 
 import struct
 import numpy as np
@@ -26,8 +35,10 @@ dtype_dict[2] = '>i2'
 dtype_dict[3] = '>i4'
 dtype_dict[4] = '>f4'
 dtype_dict[5] = '>f8'
+dtype_dict[6] = '>c8'
 dtype_dict[7] = '|O'
 dtype_dict[8] = '|O'
+dtype_dict[9] = '>c16'
 dtype_dict[12] = '>u2'
 dtype_dict[13] = '>u4'
 dtype_dict[14] = '>i8'
@@ -35,66 +46,81 @@ dtype_dict[15] = '>u8'
 
 
 def align_32(f):
+    '''If not aligned with a 32-bit position, move to the next one'''
     pos = f.tell()
     if pos % 4 <> 0:
         f.seek(pos + 4 - pos % 4)
 
 
 def skip_bytes(f, n):
+    '''Skip `n` bytes'''
     f.read(n)
     return
 
 
 def read_bytes(f, n):
+    '''Read the next `n` bytes'''
     return f.read(n)
 
 
 def read_byte(f):
-    return struct.unpack('>B', f.read(4)[0])[0]
+    '''Read a single byte'''
+    return np.uint8(struct.unpack('>B', f.read(4)[0])[0])
 
 
 def read_long(f):
-    return struct.unpack('>l', f.read(4))[0]
+    '''Read a signed 32-bit integer'''
+    return np.int32(struct.unpack('>l', f.read(4))[0])
 
 
 def read_int16(f):
-    return struct.unpack('>h', f.read(4)[2:4])[0]
+    '''Read a signed 16-bit integer'''
+    return np.int16(struct.unpack('>h', f.read(4)[2:4])[0])
 
 
 def read_int32(f):
-    return struct.unpack('>i', f.read(4))[0]
+    '''Read a signed 32-bit integer'''
+    return np.int32(struct.unpack('>i', f.read(4))[0])
 
 
 def read_int64(f):
-    return struct.unpack('>q', f.read(8))[0]
+    '''Read a signed 64-bit integer'''
+    return np.int64(struct.unpack('>q', f.read(8))[0])
 
 
 def read_uint16(f):
-    return struct.unpack('>H', f.read(4)[2:4])[0]
+    '''Read an unsigned 16-bit integer'''
+    return np.uint16(struct.unpack('>H', f.read(4)[2:4])[0])
 
 
 def read_uint32(f):
-    return struct.unpack('>I', f.read(4))[0]
+    '''Read an unsigned 32-bit integer'''
+    return np.uint32(struct.unpack('>I', f.read(4))[0])
 
 
 def read_uint64(f):
-    return struct.unpack('>Q', f.read(8))[0]
+    '''Read an unsigned 64-bit integer'''
+    return np.uint64(struct.unpack('>Q', f.read(8))[0])
 
 
 def read_float32(f):
-    return struct.unpack('>f', f.read(4))[0]
+    '''Read a 32-bit float'''
+    return np.float32(struct.unpack('>f', f.read(4))[0])
 
 
 def read_float64(f):
-    return struct.unpack('>d', f.read(8))[0]
+    '''Read a 64-bit float'''
+    return np.float64(struct.unpack('>d', f.read(8))[0])
 
 
 class Pointer(object):
+    '''Class used to define pointers'''
 
     def __init__(self, index):
         self.index = index
         return
 
+# Define the different record types that can be found in an IDL save file
 rectype_dict = {}
 rectype_dict[0] = "START_MARKER"
 rectype_dict[1] = "COMMON_VARIABLE"
@@ -110,21 +136,23 @@ rectype_dict[16] = "HEAP_DATA"
 rectype_dict[17] = "PROMOTE64"
 rectype_dict[19] = "NOTICE"
 
+# Define a dictionary to contain structure definitions
 struct_dict = {}
 
 
 def read_string(f):
+    '''Read a string'''
     length = read_long(f)
     if length > 0:
         chars = read_bytes(f, length)
         align_32(f)
     else:
         chars = None
-    return chars
+    return np.str(chars)
 
 
 def read_string_data(f):
-    '''Read a string'''
+    '''Read a data string (length is specified twice)'''
     length = read_long(f)
     if length > 0:
         length = read_long(f)
@@ -132,10 +160,11 @@ def read_string_data(f):
         align_32(f)
     else:
         string = None
-    return string
+    return np.str(string)
 
 
 def read_data(f, dtype):
+    '''Read a variable with a specified data type'''
     if dtype==1:
         if read_int32(f) <> 1:
             raise Exception("Error occured while reading byte variable")
@@ -149,13 +178,17 @@ def read_data(f, dtype):
     elif dtype==5:
         return read_float64(f)
     elif dtype==6:
-        raise Exception("32-bit complex type not implemented")
+        real = read_float32(f)
+        imag = read_float32(f)
+        return np.complex64(real + imag * 1j)
     elif dtype==7:
         return read_string_data(f)
     elif dtype==8:
         raise Exception("Should not be here - please report this")
     elif dtype==9:
-        raise Exception("32-bit complex type not implemented")
+        real = read_float64(f)
+        imag = read_float64(f)
+        return np.complex128(real + imag * 1j)
     elif dtype==10:
         return Pointer(read_int32(f))
     elif dtype==11:
@@ -173,6 +206,10 @@ def read_data(f, dtype):
 
 
 def read_structure(f, array_desc, struct_desc):
+    '''
+    Read a structure, with the array and structure descriptors given as
+    `array_desc` and `structure_desc` respectively.
+    '''
 
     nrows = array_desc.nelements
     ncols = struct_desc.ntags
@@ -209,8 +246,12 @@ def read_structure(f, array_desc, struct_desc):
 
 
 def read_array(f, typecode, array_desc):
+    '''
+    Read an array of type `typecode`, with the array descriptor given as
+    `array_desc`.
+    '''
 
-    if typecode in [1, 3, 4, 5, 13, 14, 15]:
+    if typecode in [1, 3, 4, 5, 6, 9, 13, 14, 15]:
 
         if typecode == 1:
             nbytes = read_int32(f)
@@ -252,6 +293,7 @@ def read_array(f, typecode, array_desc):
 
 
 class Record(object):
+    '''Class for reading and storing complete records'''
 
     def __init__(self):
         self.end = False
@@ -402,6 +444,7 @@ class Record(object):
 
 
 class TypeDesc(object):
+    '''Class for reading and storing data type descriptors'''
 
     def __init__(self):
         pass
@@ -429,6 +472,7 @@ class TypeDesc(object):
 
 
 class ArrayDesc(object):
+    '''Class for reading and storing array descriptors'''
 
     def __init__(self):
         pass
@@ -482,6 +526,7 @@ class ArrayDesc(object):
 
 
 class StructDesc(object):
+    '''Class for reading and storing structure descriptors'''
 
     def __init__(self):
         pass
@@ -531,6 +576,7 @@ class StructDesc(object):
 
 
 class TagDesc(object):
+    '''Class for reading and storing tag descriptors'''
 
     def __init__(self):
         pass
@@ -553,171 +599,208 @@ class TagDesc(object):
         return self
 
 
-class IDLSaveFile(object):
+class AttrDict(dict):
+    '''
+    A case-insensitive dictionary with access via item, attribute, and call notations:
 
-    def __init__(self, filename):
-        self.records = None
-        self.variables = None
-        self.filename = filename
+        >>> d = AttrDict()
+        >>> d['Variable'] = 123
+        >>> d['Variable']
+        123
+        >>> d.Variable
+        123
+        >>> d.variable
+        123
+        >>> d('VARIABLE')
+        123
+    '''
 
-    def parse(self, verbose=True, uncompressed_filename=None):
+    def __init__(self, init={}):
+        dict.__init__(self, init)
 
-        self.records = []
-        self.variables = {}
+    def __getitem__(self, name):
+        return super(AttrDict, self).__getitem__(name.lower())
 
-        f = file(self.filename, 'rb')
+    def __setitem__(self, key, value):
+        return super(AttrDict, self).__setitem__(key.lower(), value)
 
-        signature = read_bytes(f, 2)
-        if signature <> 'SR':
-            raise Exception("Invalid SIGNATURE: %s" % signature)
-
-        recfmt = read_bytes(f, 2)
-
-        if recfmt == '\x00\x04':
-            pass
-
-        elif recfmt == '\x00\x06':
-
-            print "IDL Save file is compressed"
-
-            if uncompressed_filename:
-                fout = file(uncompressed_filename, 'w+b')
-            else:
-                fout = tempfile.NamedTemporaryFile(suffix='.sav')
-
-            print " -> expanding to %s" % fout.name
-
-            # Write header
-            fout.write('SR\x00\x04')
-
-            # Cycle through records
-            while True:
-
-                # Read record type
-                rectype = read_long(f)
-                fout.write(struct.pack('>l', rectype))
-
-                # Read position of next record and return as int
-                nextrec = read_uint32(f)
-                nextrec += read_uint32(f) * 2**32
-
-                # Read the unknown 4 bytes
-                unknown = f.read(4)
-
-                # Check if the end of the file has been reached
-                if rectype_dict[rectype] == 'END_MARKER':
-                    fout.write(struct.pack('>I', nextrec % 2**32))
-                    fout.write(struct.pack('>I', (nextrec - (nextrec % 2**32)) / 2**32))
-                    fout.write(unknown)
-                    break
-
-                # Find current position
-                pos = f.tell()
-
-                # Decompress record
-                string = zlib.decompress(f.read(nextrec-pos))
-
-                # Find new position of next record
-                nextrec = fout.tell() + len(string) + 12
-
-                # Write out record
-                fout.write(struct.pack('>I', nextrec % 2**32))
-                fout.write(struct.pack('>I', (nextrec - (nextrec % 2**32)) / 2**32))
-                fout.write(unknown)
-                fout.write(string)
-
-            # Close the original compressed file
-            f.close()
-
-            # Set f to be the decompressed file, and skip the first four bytes
-            f = fout
-            f.seek(4)
-
-        else:
-            raise Exception("Invalid RECFMT: %s" % recfmt)
-
-        rectypes = []
-        while True:
-            r = Record().read(f)
-            self.records.append(r)
-            rectypes.append(r.rectype)
-            if r.end:
-                break
-
-        f.close()
-
-        # Find heap data variables
-        heap = {}
-        for r in self.records:
-            if r.rectype == "HEAP_DATA":
-                heap[r.heap_index] = r.data
-
-        for r in self.records:
-            if r.rectype == "VARIABLE":
-                while isinstance(r.data, Pointer):
-                    r.data = heap[r.data.index]
-                self.variables[r.varname.lower()] = r.data
-
-        if verbose:
-
-            for header in ['TIMESTAMP', 'VERSION', 'IDENTIFICATION']:
-                if header in rectypes:
-                    print "-"*50
-                    pos = rectypes.index(header)
-                    print self.records[pos]
-
-            print "-"*50
-            print "Successfully read %i records of which:" % \
-                                                (len(self.records))
-            for rt in set(rectypes):
-                if rt <> 'END_MARKER':
-                    print " - %i are of type %s" % (rectypes.count(rt), rt)
-            print "-"*50
-
-            if 'VARIABLE' in rectypes:
-                print "Available variables:"
-                for var in self.variables:
-                    print " - %s [%s]" % (var, type(self.variables[var]))
-                print "-"*50
-
-    def __call__(self, key):
-        if key.lower() in self.variables:
-            return self.variables[key.lower()]
-        else:
-            raise Exception("No such variable: %s" % key)
-
-    def __getitem__(self, key):
-        if key.lower() in self.variables:
-            return self.variables[key.lower()]
-        else:
-            raise Exception("No such variable: %s" % key)
-
-    def __getattr__(self, key):
-        if key.lower() in self.variables:
-            return self.variables[key.lower()]
-        else:
-            raise Exception("No such variable: %s" % key)
+    __getattr__ = __getitem__
+    __setattr__ = __setitem__
+    __call__ = __getitem__
 
 
-def read(filename, verbose=True, uncompressed_filename=None):
+def read(file_name, idict=None, python_dict=False, uncompressed_file_name=None, verbose=True):
     '''
     Read an IDL .sav file
 
-    Required Arguments:
+    Parameters
+    ----------
+    file_name : str
+        Name of the IDL save file.
+    idict : dict, optional
+        Dictionary in which to insert .sav file variables
+    python_dict: bool, optional
+        By default, the object return is not a Python dictionary, but a
+        case-insensitive dictionary with item, attribute, and call access
+        to variables. To get a standard Python dictionary, set this option
+        to True. If `idict` is specified, `attribute_access` is ignored.
+    uncompressed_file_name : str, optional
+        This option only has an effect for .sav files written with the
+        /compress option. If a file name is specified, compressed .sav
+        files are uncompressed to this file. Otherwise, idlsave will use
+        the `tempfile` module to determine a temporary filename
+        automatically, and will remove the temporary file upon successfully
+        reading it in.
+    verbose : bool, optional
+        Whether to print out information about the save file, including
+        the records read, and available variables.
 
-        *verbose*: [ True | False ]
-            Whether to print out information about the save file, including
-            the records read, and available variables.
-
-        *uncompressed_filename*: [ None | str ]
-            This option is only effective for .sav files written with the
-            /COMPRESS option. If a string is specified, compressed .sav files
-            are uncompressed to this filename. If None is specified, idlsave
-            will use the tempfile module to determine a temporary filename
-            automatically, and will remove the temporary file upon
-            successfully reading it in.
+    Returns
+    ----------
+    idl_dict : AttrDict or dict
+        If `python_dict` is set to False (default), this function returns a
+        case-insensitive dictionary with item, attribute, and call access
+        to variables. If `python_dict` is set to True, this function
+        returns a Python dictionary with all variable names in lowercase.
+        If `idict` was specified, then variables are written to the
+        dictionary specified, and the updated dictionary is returned.
     '''
 
-    s = IDLSaveFile(filename)
-    s.parse(verbose=verbose, uncompressed_filename=uncompressed_filename)
-    return s
+    # Initialize record and variable holders
+    records = []
+    if python_dict or idict:
+        variables = {}
+    else:
+        variables = AttrDict()
+
+    # Open the IDL file
+    f = file(file_name, 'rb')
+
+    # Read the signature, which should be 'SR'
+    signature = read_bytes(f, 2)
+    if signature <> 'SR':
+        raise Exception("Invalid SIGNATURE: %s" % signature)
+
+    # Next, the record format, which is '\x00\x04' for normal .sav
+    # files, and '\x00\x06' for compressed .sav files.
+    recfmt = read_bytes(f, 2)
+
+    if recfmt == '\x00\x04':
+        pass
+
+    elif recfmt == '\x00\x06':
+
+        if verbose:
+            print "IDL Save file is compressed"
+
+        if uncompressed_file_name:
+            fout = file(uncompressed_file_name, 'w+b')
+        else:
+            fout = tempfile.NamedTemporaryFile(suffix='.sav')
+
+        if verbose:
+            print " -> expanding to %s" % fout.name
+
+        # Write header
+        fout.write('SR\x00\x04')
+
+        # Cycle through records
+        while True:
+
+            # Read record type
+            rectype = read_long(f)
+            fout.write(struct.pack('>l', rectype))
+
+            # Read position of next record and return as int
+            nextrec = read_uint32(f)
+            nextrec += read_uint32(f) * 2**32
+
+            # Read the unknown 4 bytes
+            unknown = f.read(4)
+
+            # Check if the end of the file has been reached
+            if rectype_dict[rectype] == 'END_MARKER':
+                fout.write(struct.pack('>I', int(nextrec) % 2**32))
+                fout.write(struct.pack('>I', int((nextrec - (nextrec % 2**32)) / 2**32)))
+                fout.write(unknown)
+                break
+
+            # Find current position
+            pos = f.tell()
+
+            # Decompress record
+            string = zlib.decompress(f.read(nextrec-pos))
+
+            # Find new position of next record
+            nextrec = fout.tell() + len(string) + 12
+
+            # Write out record
+            fout.write(struct.pack('>I', int(nextrec % 2**32)))
+            fout.write(struct.pack('>I', int((nextrec - (nextrec % 2**32)) / 2**32)))
+            fout.write(unknown)
+            fout.write(string)
+
+        # Close the original compressed file
+        f.close()
+
+        # Set f to be the decompressed file, and skip the first four bytes
+        f = fout
+        f.seek(4)
+
+    else:
+        raise Exception("Invalid RECFMT: %s" % recfmt)
+
+    # Loop through records, and add them to the list
+    while True:
+        r = Record().read(f)
+        records.append(r)
+        if r.end:
+            break
+
+    # Close the file
+    f.close()
+
+    # Find heap data variables
+    heap = {}
+    for r in records:
+        if r.rectype == "HEAP_DATA":
+            heap[r.heap_index] = r.data
+
+    # Find all variables
+    for r in records:
+        if r.rectype == "VARIABLE":
+            while isinstance(r.data, Pointer):
+                r.data = heap[r.data.index]
+            variables[r.varname.lower()] = r.data
+
+    if verbose:
+
+        # Create convenience list of record types
+        rectypes = [r.rectype for r in records]
+
+        for header in ['TIMESTAMP', 'VERSION', 'IDENTIFICATION']:
+            if header in rectypes:
+                print "-"*50
+                pos = rectypes.index(header)
+                print records[pos]
+
+        print "-"*50
+        print "Successfully read %i records of which:" % \
+                                            (len(records))
+        for rt in set(rectypes):
+            if rt <> 'END_MARKER':
+                print " - %i are of type %s" % (rectypes.count(rt), rt)
+        print "-"*50
+
+        if 'VARIABLE' in rectypes:
+            print "Available variables:"
+            for var in variables:
+                print " - %s [%s]" % (var, type(variables[var]))
+            print "-"*50
+
+    if idict:
+        for var in variables:
+            idict[var] = variables[var]
+        return idict
+    else:
+        return variables
