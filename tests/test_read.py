@@ -11,6 +11,7 @@ import idlsave
 
 
 def object_array(*args):
+    '''Constructs a numpy array of objects'''
     array = np.empty(len(args), dtype=np.object)
     for i in range(len(args)):
         array[i] = args[i]
@@ -33,6 +34,7 @@ def assert_array_identical(a, b):
 
 
 class TestIdict:
+    '''Test the idict= argument to read'''
 
     def test_idict(self):
         custom_dict = {'a': np.int16(999)}
@@ -45,6 +47,7 @@ class TestIdict:
 
 
 class TestScalars:
+    '''Test that scalar values are read in with the correct value and type'''
 
     def test_byte(self):
         s = idlsave.read(path.join(DATA_PATH, 'scalar_byte.sav'), verbose=False)
@@ -105,6 +108,7 @@ class TestScalars:
 
 
 class TestCompressed(TestScalars):
+    '''Test that compressed .sav files can be read in'''
 
     def test_compressed(self):
         s = idlsave.read(path.join(DATA_PATH, 'various_compressed.sav'), verbose=False)
@@ -119,6 +123,7 @@ class TestCompressed(TestScalars):
 
 
 class TestArrayDimensions:
+    '''Test that multi-dimensional arrays are read in with the correct dimensions'''
 
     def test_1d(self):
         s = idlsave.read(path.join(DATA_PATH, 'array_float32_1d.sav'), verbose=False)
@@ -154,6 +159,7 @@ class TestArrayDimensions:
 
 
 class TestStructures:
+    '''Test that structures are correctly read in'''
 
     def test_scalars(self):
         s = idlsave.read(path.join(DATA_PATH, 'struct_scalars.sav'), verbose=False)
@@ -205,6 +211,7 @@ class TestStructures:
 
 
 class TestPointers:
+    '''Check that pointers in .sav files produce references to the same object in Python'''
 
     def test_pointers(self):
         s = idlsave.read(path.join(DATA_PATH, 'scalar_heap_pointer.sav'), verbose=False)
