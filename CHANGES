@@ -1,5 +1,22 @@
 CHANGES
 
+  Version 0.9.6
+
+    - Added unit tests
+
+    - Scalars are now returned with the correct Numpy type
+
+    - The read() function now returns a case-insensitive dictionary of
+      variables with attribute access
+
+    - Added option to provide an existing dictionary to append variables to
+
+    - Re-released under MIT license
+
+  Version 0.9.5
+
+    - Added support for reading .sav files written with /COMPRESS
+
   Version 0.9.4
   
     - Fixed PREDEF for structures
