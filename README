@@ -6,9 +6,9 @@ INTRODUCTION
   types. Arrays are converted to Numpy arrays, and Structures are converted to
   Numpy record arrays.
 
-  The following example demonstrates how to read a .sav file into python.
-  This is done using the idlsave.read method, which returns an IDLSaveFile
-  instance:
+  The following example demonstrates how to read a .sav file into python. This
+  is done using the idlsave.read method, which returns a dictionary-like
+  object with attribute access:
 
     import idlsave
     s = idlsave.read('myidlfile.sav')
