@@ -1,9 +1,13 @@
 # IDLSave - a python module to read IDL 'save' files
 # Copyright (c) 2010 Thomas P. Robitaille
 
-# This code was developed by with permission from ITT Visual Information Systems.
-# IDL(r) is a registered trademark of ITT Visual Information Systems, Inc. for
-# their Interactive Data Language software.
+# Many thanks to Craig Markwardt for publishing the Unofficial Format
+# Specification for IDL .sav files, without which this Python module would not
+# exist (http://cow.physics.wisc.edu/~craigm/idl/savefmt).
+
+# This code was developed by with permission from ITT Visual Information
+# Systems. IDL(r) is a registered trademark of ITT Visual Information Systems,
+# Inc. for their Interactive Data Language software.
 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -11,10 +15,10 @@
 # the rights to use, copy, modify, merge, publish, distribute, sublicense,
 # and/or sell copies of the Software, and to permit persons to whom the
 # Software is furnished to do so, subject to the following conditions:
-#
+
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-#
+
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -29,86 +33,108 @@ import tempfile
 import zlib
 import warnings
 
-dtype_dict = {}
-dtype_dict[1] = '>u1'
-dtype_dict[2] = '>i2'
-dtype_dict[3] = '>i4'
-dtype_dict[4] = '>f4'
-dtype_dict[5] = '>f8'
-dtype_dict[6] = '>c8'
-dtype_dict[7] = '|O'
-dtype_dict[8] = '|O'
-dtype_dict[9] = '>c16'
-dtype_dict[12] = '>u2'
-dtype_dict[13] = '>u4'
-dtype_dict[14] = '>i8'
-dtype_dict[15] = '>u8'
+# Define the different data types that can be found in an IDL save file
+DTYPE_DICT = {}
+DTYPE_DICT[1] = '>u1'
+DTYPE_DICT[2] = '>i2'
+DTYPE_DICT[3] = '>i4'
+DTYPE_DICT[4] = '>f4'
+DTYPE_DICT[5] = '>f8'
+DTYPE_DICT[6] = '>c8'
+DTYPE_DICT[7] = '|O'
+DTYPE_DICT[8] = '|O'
+DTYPE_DICT[9] = '>c16'
+DTYPE_DICT[12] = '>u2'
+DTYPE_DICT[13] = '>u4'
+DTYPE_DICT[14] = '>i8'
+DTYPE_DICT[15] = '>u8'
+
+# Define the different record types that can be found in an IDL save file
+RECTYPE_DICT = {}
+RECTYPE_DICT[0] = "START_MARKER"
+RECTYPE_DICT[1] = "COMMON_VARIABLE"
+RECTYPE_DICT[2] = "VARIABLE"
+RECTYPE_DICT[3] = "SYSTEM_VARIABLE"
+RECTYPE_DICT[6] = "END_MARKER"
+RECTYPE_DICT[10] = "TIMESTAMP"
+RECTYPE_DICT[12] = "COMPILED"
+RECTYPE_DICT[13] = "IDENTIFICATION"
+RECTYPE_DICT[14] = "VERSION"
+RECTYPE_DICT[15] = "HEAP_HEADER"
+RECTYPE_DICT[16] = "HEAP_DATA"
+RECTYPE_DICT[17] = "PROMOTE64"
+RECTYPE_DICT[19] = "NOTICE"
+
+# Define a dictionary to contain structure definitions
+STRUCT_DICT = {}
 
 
-def align_32(f):
-    '''If not aligned with a 32-bit position, move to the next one'''
+def _align_32(f):
+    '''Align to the next 32-bit position in a file'''
+
     pos = f.tell()
     if pos % 4 <> 0:
         f.seek(pos + 4 - pos % 4)
+    return
 
 
-def skip_bytes(f, n):
+def _skip_bytes(f, n):
     '''Skip `n` bytes'''
     f.read(n)
     return
 
 
-def read_bytes(f, n):
+def _read_bytes(f, n):
     '''Read the next `n` bytes'''
     return f.read(n)
 
 
-def read_byte(f):
+def _read_byte(f):
     '''Read a single byte'''
     return np.uint8(struct.unpack('>B', f.read(4)[0])[0])
 
 
-def read_long(f):
+def _read_long(f):
     '''Read a signed 32-bit integer'''
     return np.int32(struct.unpack('>l', f.read(4))[0])
 
 
-def read_int16(f):
+def _read_int16(f):
     '''Read a signed 16-bit integer'''
     return np.int16(struct.unpack('>h', f.read(4)[2:4])[0])
 
 
-def read_int32(f):
+def _read_int32(f):
     '''Read a signed 32-bit integer'''
     return np.int32(struct.unpack('>i', f.read(4))[0])
 
 
-def read_int64(f):
+def _read_int64(f):
     '''Read a signed 64-bit integer'''
     return np.int64(struct.unpack('>q', f.read(8))[0])
 
 
-def read_uint16(f):
+def _read_uint16(f):
     '''Read an unsigned 16-bit integer'''
     return np.uint16(struct.unpack('>H', f.read(4)[2:4])[0])
 
 
-def read_uint32(f):
+def _read_uint32(f):
     '''Read an unsigned 32-bit integer'''
     return np.uint32(struct.unpack('>I', f.read(4))[0])
 
 
-def read_uint64(f):
+def _read_uint64(f):
     '''Read an unsigned 64-bit integer'''
     return np.uint64(struct.unpack('>Q', f.read(8))[0])
 
 
-def read_float32(f):
+def _read_float32(f):
     '''Read a 32-bit float'''
     return np.float32(struct.unpack('>f', f.read(4))[0])
 
 
-def read_float64(f):
+def _read_float64(f):
     '''Read a 64-bit float'''
     return np.float64(struct.unpack('>d', f.read(8))[0])
 
@@ -120,132 +146,113 @@ class Pointer(object):
         self.index = index
         return
 
-# Define the different record types that can be found in an IDL save file
-rectype_dict = {}
-rectype_dict[0] = "START_MARKER"
-rectype_dict[1] = "COMMON_VARIABLE"
-rectype_dict[2] = "VARIABLE"
-rectype_dict[3] = "SYSTEM_VARIABLE"
-rectype_dict[6] = "END_MARKER"
-rectype_dict[10] = "TIMESTAMP"
-rectype_dict[12] = "COMPILED"
-rectype_dict[13] = "IDENTIFICATION"
-rectype_dict[14] = "VERSION"
-rectype_dict[15] = "HEAP_HEADER"
-rectype_dict[16] = "HEAP_DATA"
-rectype_dict[17] = "PROMOTE64"
-rectype_dict[19] = "NOTICE"
 
-# Define a dictionary to contain structure definitions
-struct_dict = {}
-
-
-def read_string(f):
+def _read_string(f):
     '''Read a string'''
-    length = read_long(f)
+    length = _read_long(f)
     if length > 0:
-        chars = read_bytes(f, length)
-        align_32(f)
+        chars = _read_bytes(f, length)
+        _align_32(f)
     else:
         chars = None
     return np.str(chars)
 
 
-def read_string_data(f):
+def _read_string_data(f):
     '''Read a data string (length is specified twice)'''
-    length = read_long(f)
+    length = _read_long(f)
     if length > 0:
-        length = read_long(f)
-        string = read_bytes(f, length)
-        align_32(f)
+        length = _read_long(f)
+        string = _read_bytes(f, length)
+        _align_32(f)
     else:
         string = None
     return np.str(string)
 
 
-def read_data(f, dtype):
+def _read_data(f, dtype):
     '''Read a variable with a specified data type'''
     if dtype==1:
-        if read_int32(f) <> 1:
+        if _read_int32(f) <> 1:
             raise Exception("Error occured while reading byte variable")
-        return read_byte(f)
+        return _read_byte(f)
     elif dtype==2:
-        return read_int16(f)
+        return _read_int16(f)
     elif dtype==3:
-        return read_int32(f)
+        return _read_int32(f)
     elif dtype==4:
-        return read_float32(f)
+        return _read_float32(f)
     elif dtype==5:
-        return read_float64(f)
+        return _read_float64(f)
     elif dtype==6:
-        real = read_float32(f)
-        imag = read_float32(f)
+        real = _read_float32(f)
+        imag = _read_float32(f)
         return np.complex64(real + imag * 1j)
     elif dtype==7:
-        return read_string_data(f)
+        return _read_string_data(f)
     elif dtype==8:
         raise Exception("Should not be here - please report this")
     elif dtype==9:
-        real = read_float64(f)
-        imag = read_float64(f)
+        real = _read_float64(f)
+        imag = _read_float64(f)
         return np.complex128(real + imag * 1j)
     elif dtype==10:
-        return Pointer(read_int32(f))
+        return Pointer(_read_int32(f))
     elif dtype==11:
         raise Exception("Object reference type not implemented")
     elif dtype==12:
-        return read_uint16(f)
+        return _read_uint16(f)
     elif dtype==13:
-        return read_uint32(f)
+        return _read_uint32(f)
     elif dtype==14:
-        return read_int64(f)
+        return _read_int64(f)
     elif dtype==15:
-        return read_uint64(f)
+        return _read_uint64(f)
     else:
         raise Exception("Unknown IDL type: %i - please report this" % dtype)
 
 
-def read_structure(f, array_desc, struct_desc):
+def _read_structure(f, array_desc, struct_desc):
     '''
     Read a structure, with the array and structure descriptors given as
     `array_desc` and `structure_desc` respectively.
     '''
 
-    nrows = array_desc.nelements
-    ncols = struct_desc.ntags
-    columns = struct_desc.tagtable
+    nrows = array_desc['nelements']
+    ncols = struct_desc['ntags']
+    columns = struct_desc['tagtable']
 
     dtype = []
     for col in columns:
-        if col.structure or col.array:
-            dtype.append(((col.name.lower(), col.name), np.object_))
+        if col['structure'] or col['array']:
+            dtype.append(((col['name'].lower(), col['name']), np.object_))
         else:
-            if col.typecode in dtype_dict:
-                dtype.append(((col.name.lower(), col.name),
-                                    dtype_dict[col.typecode]))
+            if col['typecode'] in DTYPE_DICT:
+                dtype.append(((col['name'].lower(), col['name']),
+                                    DTYPE_DICT[col['typecode']]))
             else:
                 raise Exception("Variable type %i not implemented" %
-                                                            col.typecode)
+                                                            col['typecode'])
 
     structure = np.recarray((nrows, ), dtype=dtype)
 
     for i in range(nrows):
         for col in columns:
-            dtype = col.typecode
-            if col.structure:
-                structure[col.name][i] = read_structure(f, \
-                                            struct_desc.arrtable[col.name], \
-                                            struct_desc.structtable[col.name])
-            elif col.array:
-                structure[col.name][i] = read_array(f, dtype, \
-                                            struct_desc.arrtable[col.name])
+            dtype = col['typecode']
+            if col['structure']:
+                structure[col['name']][i] = _read_structure(f, \
+                                      struct_desc['arrtable'][col['name']], \
+                                      struct_desc['structtable'][col['name']])
+            elif col['array']:
+                structure[col['name']][i] = _read_array(f, dtype, \
+                                      struct_desc['arrtable'][col['name']])
             else:
-                structure[col.name][i] = read_data(f, dtype)
+                structure[col['name']][i] = _read_data(f, dtype)
 
     return structure
 
 
-def read_array(f, typecode, array_desc):
+def _read_array(f, typecode, array_desc):
     '''
     Read an array of type `typecode`, with the array descriptor given as
     `array_desc`.
@@ -254,354 +261,295 @@ def read_array(f, typecode, array_desc):
     if typecode in [1, 3, 4, 5, 6, 9, 13, 14, 15]:
 
         if typecode == 1:
-            nbytes = read_int32(f)
-            if nbytes <> array_desc.nbytes:
+            nbytes = _read_int32(f)
+            if nbytes <> array_desc['nbytes']:
                 raise Exception("Error occured while reading byte array")
 
         # Read bytes as numpy array
-        array = np.fromstring(f.read(array_desc.nbytes), \
-                                dtype=dtype_dict[typecode])
+        array = np.fromstring(f.read(array_desc['nbytes']), \
+                                dtype=DTYPE_DICT[typecode])
 
     elif typecode in [2, 12]:
 
         # These are 2 byte types, need to skip every two as they are not packed
 
-        array = np.fromstring(f.read(array_desc.nbytes*2), \
-                                dtype=dtype_dict[typecode])[1::2]
+        array = np.fromstring(f.read(array_desc['nbytes']*2), \
+                                dtype=DTYPE_DICT[typecode])[1::2]
 
     else:
 
         # Read bytes into list
         array = []
-        for i in range(array_desc.nelements):
+        for i in range(array_desc['nelements']):
             dtype = typecode
-            data = read_data(f, dtype)
+            data = _read_data(f, dtype)
             array.append(data)
 
         array = np.array(array, dtype=np.object_)
 
     # Reshape array if needed
-    if array_desc.ndims > 1:
-        dims = array_desc.dims[:array_desc.ndims]
+    if array_desc['ndims'] > 1:
+        dims = array_desc['dims'][:array_desc['ndims']]
         dims.reverse()
         array = array.reshape(dims)
 
     # Go to next alignment position
-    align_32(f)
+    _align_32(f)
 
     return array
 
 
-class Record(object):
-    '''Class for reading and storing complete records'''
+def _read_record(f):
+    '''Function to read in a full record'''
 
-    def __init__(self):
-        self.end = False
-        pass
+    record = {}
 
-    def read(self, f):
+    recpos = f.tell()
+    record['rectype'] = _read_long(f)
 
-        self.recpos = f.tell()
-        self.rectype = read_long(f)
+    nextrec = _read_uint32(f)
+    nextrec += _read_uint32(f) * 2**32
 
-        self.nextrec = read_uint32(f)
-        self.nextrec += read_uint32(f) * 2**32
+    _skip_bytes(f, 4)
 
-        skip_bytes(f, 4)
+    if not record['rectype'] in RECTYPE_DICT:
+        raise Exception("Unknown RECTYPE: %i" % record['rectype'])
 
-        if not self.rectype in rectype_dict:
-            raise Exception("Unknown RECTYPE: %i" % self.rectype)
+    record['rectype'] = RECTYPE_DICT[record['rectype']]
 
-        self.rectype = rectype_dict[self.rectype]
+    if record['rectype'] in ["VARIABLE", "HEAP_DATA"]:
 
-        if self.rectype in ["VARIABLE", "HEAP_DATA"]:
-
-            if self.rectype == "VARIABLE":
-                self.varname = read_string(f)
-            else:
-                self.heap_index = read_long(f)
-                skip_bytes(f, 4)
-
-            self.rectypedesc = TypeDesc().read(f)
-
-            varstart = read_long(f)
-            if varstart <> 7:
-                raise Exception("VARSTART is not 7")
-
-            if self.rectypedesc.structure:
-                self.data = read_structure(f, self.rectypedesc.array_desc, \
-                                            self.rectypedesc.struct_desc)
-            elif self.rectypedesc.array:
-                self.data = read_array(f, self.rectypedesc.typecode, \
-                                            self.rectypedesc.array_desc)
-            else:
-                dtype = self.rectypedesc.typecode
-                self.data = read_data(f, dtype)
-
-        elif self.rectype == "TIMESTAMP":
-
-            skip_bytes(f, 4*256)
-            self.date = read_string(f)
-            self.user = read_string(f)
-            self.host = read_string(f)
-
-        elif self.rectype == "VERSION":
-
-            self.format = read_long(f)
-            self.arch = read_string(f)
-            self.os = read_string(f)
-            self.release = read_string(f)
-
-        elif self.rectype == "IDENTIFICATON":
-
-            self.author = read_string(f)
-            self.title = read_string(f)
-            self.idcode = read_string(f)
-
-        elif self.rectype == "NOTICE":
-
-            self.notice = read_string(f)
-
-        elif self.rectype == "HEAP_HEADER":
-
-            self.nvalues = read_long(f)
-            self.indices = []
-            for i in range(self.nvalues):
-                self.indices.append(read_long(f))
-
-        elif self.rectype == "COMMONBLOCK":
-
-            self.nvars = read_long(f)
-            self.name = read_string(f)
-            self.varnames = []
-            for i in range(self.nvars):
-                self.varnames.append(read_string(f))
-
-        elif self.rectype == "END_MARKER":
-
-            self.end = True
-
-        elif self.rectype == "UNKNOWN":
-
-            print "Skipping UNKNOWN record"
-
-        elif self.rectype == "SYSTEM_VARIABLE":
-
-            print "Skipping SYSTEM_VARIABLE record"
-
+        if record['rectype'] == "VARIABLE":
+            record['varname'] = _read_string(f)
         else:
+            record['heap_index'] = _read_long(f)
+            _skip_bytes(f, 4)
 
-            raise Exception("RECTYPE=%s not implemented" % self.rectype)
+        rectypedesc = _read_typedesc(f)
 
-        f.seek(self.nextrec)
+        varstart = _read_long(f)
+        if varstart <> 7:
+            raise Exception("VARSTART is not 7")
 
-        return self
-
-    def __str__(self):
-
-        string = ""
-
-        if self.rectype == "VARIABLE":
-
-            string += "Name: %s\n" % self.varname
-            string += "Type: %i" % self.typedesc.typecode
-
-        elif self.rectype == "TIMESTAMP":
-
-            string += "Date: %s\n" % self.date
-            string += "User: %s\n" % self.user
-            string += "Host: %s" % self.host
-
-        elif self.rectype == "VERSION":
-
-            string += "Format: %s\n" % self.format
-            string += "Architecture: %s\n" % self.arch
-            string += "Operating System: %s\n" % self.os
-            string += "IDL Version: %s" % self.release
-
-        elif self.rectype == "IDENTIFICATON":
-
-            string += "Author: %s\n" % self.author
-            string += "Title: %s\n" % self.title
-            string += "ID Code: %s" % self.idcode
-
-        elif self.rectype == "NOTICE":
-
-            string += self.notice
-
-        elif self.rectype == "HEAP_HEADER":
-
-            string += "todo"
-
-        elif self.rectype == "COMMONBLOCK":
-
-            string += "todo"
-
-        return string
-
-    def __repr__(self):
-        return "<IDL " + self.rectype + " object>"
-
-
-class TypeDesc(object):
-    '''Class for reading and storing data type descriptors'''
-
-    def __init__(self):
-        pass
-
-    def read(self, f):
-
-        self.typecode = read_long(f)
-        self.varflags = read_long(f)
-
-        if self.varflags & 2 == 2:
-            raise Exception("System variables not implemented")
-
-        self.array = self.varflags & 4 == 4
-        self.structure = self.varflags & 32 == 32
-
-        # CHECK VARFLAGS HERE TO SEE IF ARRAY
-
-        if self.structure:
-            self.array_desc = ArrayDesc().read(f)
-            self.struct_desc = StructDesc().read(f)
-        elif self.array:
-            self.array_desc = ArrayDesc().read(f)
-
-        return self
-
-
-class ArrayDesc(object):
-    '''Class for reading and storing array descriptors'''
-
-    def __init__(self):
-        pass
-
-    def read(self, f):
-
-        self.arrstart = read_long(f)
-
-        if self.arrstart == 8:
-
-            skip_bytes(f, 4)
-
-            self.nbytes = read_long(f)
-            self.nelements = read_long(f)
-            self.ndims = read_long(f)
-
-            skip_bytes(f, 8)
-
-            self.nmax = read_long(f)
-
-            self.dims = []
-            for d in range(self.nmax):
-                self.dims.append(read_long(f))
-
-        elif self.arrstart == 18:
-
-            warnings.warn("Using experimental 64-bit array read")
-
-            skip_bytes(f, 8)
-
-            self.nbytes = read_uint64(f)
-            self.nelements = read_uint64(f)
-            self.ndims = read_long(f)
-
-            skip_bytes(f, 8)
-
-            self.nmax = 8
-
-            self.dims = []
-            for d in range(self.nmax):
-                v = read_long(f)
-                if v <> 0:
-                    raise Exception("Expected a zero in ARRAY_DESC")
-                self.dims.append(read_long(f))
-
+        if rectypedesc['structure']:
+            record['data'] = _read_structure(f, rectypedesc['array_desc'], \
+                                          rectypedesc['struct_desc'])
+        elif rectypedesc['array']:
+            record['data'] = _read_array(f, rectypedesc['typecode'], \
+                                      rectypedesc['array_desc'])
         else:
+            dtype = rectypedesc['typecode']
+            record['data'] = _read_data(f, dtype)
 
-            raise Exception("Unknown ARRSTART: %i" % self.arrstart)
+    elif record['rectype'] == "TIMESTAMP":
 
-        return self
+        _skip_bytes(f, 4*256)
+        record['date'] = _read_string(f)
+        record['user'] = _read_string(f)
+        record['host'] = _read_string(f)
+
+    elif record['rectype'] == "VERSION":
+
+        record['format'] = _read_long(f)
+        record['arch'] = _read_string(f)
+        record['os'] = _read_string(f)
+        record['release'] = _read_string(f)
+
+    elif record['rectype'] == "IDENTIFICATON":
+
+        record['author'] = _read_string(f)
+        record['title'] = _read_string(f)
+        record['idcode'] = _read_string(f)
+
+    elif record['rectype'] == "NOTICE":
+
+        record['notice'] = _read_string(f)
+
+    elif record['rectype'] == "HEAP_HEADER":
+
+        record['nvalues'] = _read_long(f)
+        record['indices'] = []
+        for i in range(record['nvalues']):
+            record['indices'].append(_read_long(f))
+
+    elif record['rectype'] == "COMMONBLOCK":
+
+        record['nvars'] = _read_long(f)
+        record['name'] = _read_string(f)
+        record['varnames'] = []
+        for i in range(record['nvars']):
+            record['varnames'].append(_read_string(f))
+
+    elif record['rectype'] == "END_MARKER":
+
+        record['end'] = True
+
+    elif record['rectype'] == "UNKNOWN":
+
+        warnings.warn("Skipping UNKNOWN record")
+
+    elif record['rectype'] == "SYSTEM_VARIABLE":
+
+        warnings.warn("Skipping SYSTEM_VARIABLE record")
+
+    else:
+
+        raise Exception("record['rectype']=%s not implemented" % \
+                                                            record['rectype'])
+
+    f.seek(nextrec)
+
+    return record
 
 
-class StructDesc(object):
-    '''Class for reading and storing structure descriptors'''
+def _read_typedesc(f):
+    '''Function to read in a type descriptor'''
 
-    def __init__(self):
-        pass
+    typedesc = {}
 
-    def read(self, f):
+    typedesc['typecode'] = _read_long(f)
+    typedesc['varflags'] = _read_long(f)
 
-        structstart = read_long(f)
-        if structstart <> 9:
-            raise Exception("STRUCTSTART should be 9")
+    if typedesc['varflags'] & 2 == 2:
+        raise Exception("System variables not implemented")
 
-        self.name = read_string(f)
-        self.predef = read_long(f)
-        self.ntags = read_long(f)
-        self.nbytes = read_long(f)
+    typedesc['array'] = typedesc['varflags'] & 4 == 4
+    typedesc['structure'] = typedesc['varflags'] & 32 == 32
 
-        if self.predef & 1 == 0:
+    if typedesc['structure']:
+        typedesc['array_desc'] = _read_arraydesc(f)
+        typedesc['struct_desc'] = _read_structdesc(f)
+    elif typedesc['array']:
+        typedesc['array_desc'] = _read_arraydesc(f)
 
-            self.tagtable = []
-            for t in range(self.ntags):
-                self.tagtable.append(TagDesc().read(f))
-
-            for i in range(self.ntags):
-                self.tagtable[i].name = read_string(f)
-
-            self.arrtable = {}
-            for t in self.tagtable:
-                if t.array:
-                    self.arrtable[t.name] = ArrayDesc().read(f)
-
-            self.structtable = {}
-            for t in self.tagtable:
-                if t.structure:
-                    self.structtable[t.name] = StructDesc().read(f)
-
-            struct_dict[self.name] = (self.tagtable, \
-                                        self.arrtable, self.structtable)
-
-        else:
-
-            if not self.name in struct_dict:
-                raise Exception("PREDEF=1 but can't find definition")
-
-            self.tagtable, self.arrtable, self.structtable = \
-                                                        struct_dict[self.name]
-
-        return self
+    return typedesc
 
 
-class TagDesc(object):
-    '''Class for reading and storing tag descriptors'''
+def _read_arraydesc(f):
+    '''Function to read in an array descriptor'''
 
-    def __init__(self):
-        pass
+    arraydesc = {}
 
-    def read(self, f):
+    arraydesc['arrstart'] = _read_long(f)
 
-        self.offset = read_long(f)
+    if arraydesc['arrstart'] == 8:
 
-        if self.offset == -1:
-            self.offset = read_uint64(f)
+        _skip_bytes(f, 4)
 
-        self.typecode = read_long(f)
-        tagflags = read_long(f)
+        arraydesc['nbytes'] = _read_long(f)
+        arraydesc['nelements'] = _read_long(f)
+        arraydesc['ndims'] = _read_long(f)
 
-        self.array = tagflags & 4 == 4
-        self.structure = tagflags & 32 == 32
-        self.scalar = self.typecode in dtype_dict
-        # Assume '10'x is scalar
+        _skip_bytes(f, 8)
 
-        return self
+        arraydesc['nmax'] = _read_long(f)
+
+        arraydesc['dims'] = []
+        for d in range(arraydesc['nmax']):
+            arraydesc['dims'].append(_read_long(f))
+
+    elif arraydesc['arrstart'] == 18:
+
+        warnings.warn("Using experimental 64-bit array read")
+
+        _skip_bytes(f, 8)
+
+        arraydesc['nbytes'] = _read_uint64(f)
+        arraydesc['nelements'] = _read_uint64(f)
+        arraydesc['ndims'] = _read_long(f)
+
+        _skip_bytes(f, 8)
+
+        arraydesc['nmax'] = 8
+
+        arraydesc['dims'] = []
+        for d in range(arraydesc['nmax']):
+            v = _read_long(f)
+            if v <> 0:
+                raise Exception("Expected a zero in ARRAY_DESC")
+            arraydesc['dims'].append(_read_long(f))
+
+    else:
+
+        raise Exception("Unknown ARRSTART: %i" % arraydesc['arrstart'])
+
+    return arraydesc
+
+
+def _read_structdesc(f):
+    '''Function to read in a structure descriptor'''
+
+    structdesc = {}
+
+    structstart = _read_long(f)
+    if structstart <> 9:
+        raise Exception("STRUCTSTART should be 9")
+
+    structdesc['name'] = _read_string(f)
+    structdesc['predef'] = _read_long(f)
+    structdesc['ntags'] = _read_long(f)
+    structdesc['nbytes'] = _read_long(f)
+
+    if structdesc['predef'] & 1 == 0:
+
+        structdesc['tagtable'] = []
+        for t in range(structdesc['ntags']):
+            structdesc['tagtable'].append(_read_tagdesc(f))
+
+        for tag in structdesc['tagtable']:
+            tag['name'] = _read_string(f)
+
+        structdesc['arrtable'] = {}
+        for tag in structdesc['tagtable']:
+            if tag['array']:
+                structdesc['arrtable'][tag['name']] = _read_arraydesc(f)
+
+        structdesc['structtable'] = {}
+        for tag in structdesc['tagtable']:
+            if tag['structure']:
+                structdesc['structtable'][tag['name']] = _read_structdesc(f)
+
+        STRUCT_DICT[structdesc['name']] = (structdesc['tagtable'], \
+                                           structdesc['arrtable'], \
+                                           structdesc['structtable'])
+
+    else:
+
+        if not structdesc['name'] in STRUCT_DICT:
+            raise Exception("PREDEF=1 but can't find definition")
+
+        structdesc['tagtable'], \
+        structdesc['arrtable'], \
+        structdesc['structtable'] = STRUCT_DICT[structdesc['name']]
+
+    return structdesc
+
+
+def _read_tagdesc(f):
+    '''Function to read in a tag descriptor'''
+
+    tagdesc = {}
+
+    tagdesc['offset'] = _read_long(f)
+
+    if tagdesc['offset'] == -1:
+        tagdesc['offset'] = _read_uint64(f)
+
+    tagdesc['typecode'] = _read_long(f)
+    tagflags = _read_long(f)
+
+    tagdesc['array'] = tagflags & 4 == 4
+    tagdesc['structure'] = tagflags & 32 == 32
+    tagdesc['scalar'] = tagdesc['typecode'] in DTYPE_DICT
+    # Assume '10'x is scalar
+
+    return tagdesc
 
 
 class AttrDict(dict):
     '''
-    A case-insensitive dictionary with access via item, attribute, and call notations:
+    A case-insensitive dictionary with access via item, attribute, and call
+    notations:
 
         >>> d = AttrDict()
         >>> d['Variable'] = 123
@@ -629,7 +577,8 @@ class AttrDict(dict):
     __call__ = __getitem__
 
 
-def read(file_name, idict=None, python_dict=False, uncompressed_file_name=None, verbose=True):
+def read(file_name, idict=None, python_dict=False,
+         uncompressed_file_name=None, verbose=True):
     '''
     Read an IDL .sav file
 
@@ -677,13 +626,13 @@ def read(file_name, idict=None, python_dict=False, uncompressed_file_name=None, 
     f = file(file_name, 'rb')
 
     # Read the signature, which should be 'SR'
-    signature = read_bytes(f, 2)
+    signature = _read_bytes(f, 2)
     if signature <> 'SR':
         raise Exception("Invalid SIGNATURE: %s" % signature)
 
     # Next, the record format, which is '\x00\x04' for normal .sav
     # files, and '\x00\x06' for compressed .sav files.
-    recfmt = read_bytes(f, 2)
+    recfmt = _read_bytes(f, 2)
 
     if recfmt == '\x00\x04':
         pass
@@ -708,18 +657,18 @@ def read(file_name, idict=None, python_dict=False, uncompressed_file_name=None, 
         while True:
 
             # Read record type
-            rectype = read_long(f)
+            rectype = _read_long(f)
             fout.write(struct.pack('>l', rectype))
 
             # Read position of next record and return as int
-            nextrec = read_uint32(f)
-            nextrec += read_uint32(f) * 2**32
+            nextrec = _read_uint32(f)
+            nextrec += _read_uint32(f) * 2**32
 
             # Read the unknown 4 bytes
             unknown = f.read(4)
 
             # Check if the end of the file has been reached
-            if rectype_dict[rectype] == 'END_MARKER':
+            if RECTYPE_DICT[rectype] == 'END_MARKER':
                 fout.write(struct.pack('>I', int(nextrec) % 2**32))
                 fout.write(struct.pack('>I', int((nextrec - (nextrec % 2**32)) / 2**32)))
                 fout.write(unknown)
@@ -752,10 +701,11 @@ def read(file_name, idict=None, python_dict=False, uncompressed_file_name=None, 
 
     # Loop through records, and add them to the list
     while True:
-        r = Record().read(f)
+        r = _read_record(f)
         records.append(r)
-        if r.end:
-            break
+        if 'end' in r:
+            if r['end']:
+                break
 
     # Close the file
     f.close()
@@ -763,30 +713,53 @@ def read(file_name, idict=None, python_dict=False, uncompressed_file_name=None, 
     # Find heap data variables
     heap = {}
     for r in records:
-        if r.rectype == "HEAP_DATA":
-            heap[r.heap_index] = r.data
+        if r['rectype'] == "HEAP_DATA":
+            heap[r['heap_index']] = r['data']
 
     # Find all variables
     for r in records:
-        if r.rectype == "VARIABLE":
-            while isinstance(r.data, Pointer):
-                r.data = heap[r.data.index]
-            variables[r.varname.lower()] = r.data
+        if r['rectype'] == "VARIABLE":
+            while isinstance(r['data'], Pointer):
+                r['data'] = heap[r['data'].index]
+            variables[r['varname'].lower()] = r['data']
 
     if verbose:
 
-        # Create convenience list of record types
-        rectypes = [r.rectype for r in records]
-
-        for header in ['TIMESTAMP', 'VERSION', 'IDENTIFICATION']:
-            if header in rectypes:
+        # Print out timestamp info about the file
+        for record in records:
+            if record['rectype'] == "TIMESTAMP":
                 print "-"*50
-                pos = rectypes.index(header)
-                print records[pos]
+                print "Date: %s" % record['date']
+                print "User: %s" % record['user']
+                print "Host: %s" % record['host']
+                break
+
+        # Print out version info about the file
+        for record in records:
+            if record['rectype'] == "VERSION":
+                print "-"*50
+                print "Format: %s" % record['format']
+                print "Architecture: %s" % record['arch']
+                print "Operating System: %s" % record['os']
+                print "IDL Version: %s" % record['release']
+                break
+
+        # Print out identification info about the file
+        for record in records:
+            if record['rectype'] == "IDENTIFICATON":
+                print "-"*50
+                print "Author: %s" % record['author']
+                print "Title: %s" % record['title']
+                print "ID Code: %s" % record['idcode']
+                break
 
         print "-"*50
         print "Successfully read %i records of which:" % \
                                             (len(records))
+
+        # Create convenience list of record types
+        rectypes = [r['rectype'] for r in records]
+
         for rt in set(rectypes):
             if rt <> 'END_MARKER':
                 print " - %i are of type %s" % (rectypes.count(rt), rt)
