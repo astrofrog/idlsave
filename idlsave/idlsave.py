@@ -592,11 +592,11 @@ def read(file_name, idict=None, python_dict=False,
         By default, the object return is not a Python dictionary, but a
         case-insensitive dictionary with item, attribute, and call access
         to variables. To get a standard Python dictionary, set this option
-        to True. If `idict` is specified, `attribute_access` is ignored.
+        to True.
     uncompressed_file_name : str, optional
         This option only has an effect for .sav files written with the
         /compress option. If a file name is specified, compressed .sav
-        files are uncompressed to this file. Otherwise, idlsave will use
+        files are uncompressed to this file. Otherwise, read will use
         the `tempfile` module to determine a temporary filename
         automatically, and will remove the temporary file upon successfully
         reading it in.

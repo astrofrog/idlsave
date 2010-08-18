@@ -2,6 +2,8 @@ CHANGES
 
   Version 0.9.6
 
+    This version is identical to the initial version committed to scipy.io.idl
+
     - Added unit tests
 
     - Scalars are now returned with the correct Numpy type
@@ -18,7 +20,7 @@ CHANGES
     - Added support for reading .sav files written with /COMPRESS
 
   Version 0.9.4
-  
+
     - Fixed PREDEF for structures
 
   Version 0.9.3
