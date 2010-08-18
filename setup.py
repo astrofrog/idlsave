@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='IDLSave',
-      version='0.9.6',
+      version='0.9.7',
       description='idlsave - a module to read IDL save files into Python',
       author='Thomas Robitaille',
       author_email='robitaille@users.sourceforge.net',

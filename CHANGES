@@ -1,8 +1,11 @@
 CHANGES
 
-  Version 0.9.6
+  Version 0.9.7
 
-    This version is identical to the initial version committed to scipy.io.idl
+    The code has been aligned with scipy coding conventions. This version is
+    identical to the initial version committed to scipy.io.idl.
+
+  Version 0.9.6
 
     - Added unit tests
 
