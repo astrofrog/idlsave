@@ -127,7 +127,11 @@ save,arrays,filename='data/struct_arrays.sav'
 
 arrays_rep = replicate(arrays, 5)
 save,arrays_rep,filename='data/struct_arrays_replicated.sav'
- 
+
+c = { circle, x:1, y:2, r:3 }  
+fc = { filled_circle, c:4, INHERITS circle }  
+save,fc,filename='data/struct_inherit.sav'
+
 ; =========== COMPRESSION ===========
 
 save, i8u, f32, c64, array5d, arrays, filename='data/various_compressed.sav', /compress
