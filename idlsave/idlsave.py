@@ -29,7 +29,13 @@
 
 import struct
 import numpy as np
-from numpy.compat import asbytes, asstr
+
+try:
+    from numpy.compat import asbytes, asstr
+except:
+    asbytes = str
+    asstr = str
+
 import tempfile
 import zlib
 import warnings
