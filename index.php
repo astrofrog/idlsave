@@ -26,13 +26,15 @@
          <br><br>
          
          <center>
-         <a href="https://sourceforge.net/projects/idlsave/files/">Download the latest version</a><br>(0.9.7, released 18 August 2010)
+         <a href="https://github.com/astrofrog/idlsave/archives/master">Download the latest version</a><br>(0.9.7, released 18 August 2010)
          </center>
          <br>
 
          This program is distributed with permission from ITT Visual Information Systems.         
 
-         To report bugs and request features, please use the Sourceforge <a href="http://sourceforge.net/tracker/?group_id=282358&atid=1197649">bug</a> and <a href="http://sourceforge.net/tracker/?group_id=282358&atid=1197652">feature request</a> trackers. To contact me directly, please use <b>robitaille at users dot sourceforge dot net</b>.<br><br>
+         To report bugs and request features, please use the <a href="https://github.com/astrofrog/idlsave/issues">issue tracker</a>. To contact me directly, please use <b>thomas dot robitaille [at] gmail dot com</b>.<br><br>
+
+         To follow the development and get a copy of the latest development code, visit the <a href="https://github.com/astrofrog/idlsave">GitHub</a> pages.
          
          <div class='subtitle'>Changes</div>
          
