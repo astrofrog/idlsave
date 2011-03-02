@@ -116,10 +116,10 @@ class TestCompressed(TestScalars):
         assert_identical(s.f32, np.float32(-3.1234567e+37))
         assert_identical(s.c64, np.complex128(1.1987253647623157e+112-5.1987258887729157e+307j))
         assert_equal(s.array5d.shape, (4, 3, 4, 6, 5))
-        assert_identical(s.arrays.a[0], np.array([1, 2, 3], dtype=np.int16))
-        assert_identical(s.arrays.b[0], np.array([4., 5., 6., 7.], dtype=np.float32))
-        assert_identical(s.arrays.c[0], np.array([np.complex64(1+2j), np.complex64(7+8j)]))
-        assert_identical(s.arrays.d[0], np.array(asbytes_nested(["cheese", "bacon", "spam"]), dtype=np.object))
+        assert_identical(s.arrays.a, np.array([1, 2, 3], dtype=np.int16))
+        assert_identical(s.arrays.b, np.array([4., 5., 6., 7.], dtype=np.float32))
+        assert_identical(s.arrays.c, np.array([np.complex64(1+2j), np.complex64(7+8j)]))
+        assert_identical(s.arrays.d, np.array(asbytes_nested(["cheese", "bacon", "spam"]), dtype=np.object))
 
 
 class TestArrayDimensions:
@@ -163,12 +163,12 @@ class TestStructures:
 
     def test_scalars(self):
         s = idlsave.read(path.join(DATA_PATH, 'struct_scalars.sav'), verbose=False)
-        assert_identical(s.scalars.a, np.array(np.int16(1)))
-        assert_identical(s.scalars.b, np.array(np.int32(2)))
-        assert_identical(s.scalars.c, np.array(np.float32(3.)))
-        assert_identical(s.scalars.d, np.array(np.float64(4.)))
-        assert_identical(s.scalars.e, np.array(asbytes_nested(["spam"]), dtype=np.object))
-        assert_identical(s.scalars.f, np.array(np.complex64(-1.+3j)))
+        assert_identical(s.scalars.a, np.int16(1))
+        assert_identical(s.scalars.b, np.int32(2))
+        assert_identical(s.scalars.c, np.float32(3.))
+        assert_identical(s.scalars.d, np.float64(4.))
+        assert_identical(s.scalars.e, asbytes("spam"))
+        assert_identical(s.scalars.f, np.complex64(-1.+3j))
 
     def test_scalars_replicated(self):
         s = idlsave.read(path.join(DATA_PATH, 'struct_scalars_replicated.sav'), verbose=False)
@@ -181,10 +181,10 @@ class TestStructures:
 
     def test_arrays(self):
         s = idlsave.read(path.join(DATA_PATH, 'struct_arrays.sav'), verbose=False)
-        assert_array_identical(s.arrays.a[0], np.array([1, 2, 3], dtype=np.int16))
-        assert_array_identical(s.arrays.b[0], np.array([4., 5., 6., 7.], dtype=np.float32))
-        assert_array_identical(s.arrays.c[0], np.array([np.complex64(1+2j), np.complex64(7+8j)]))
-        assert_array_identical(s.arrays.d[0], np.array(asbytes_nested(["cheese", "bacon", "spam"]), dtype=np.object))
+        assert_array_identical(s.arrays.a, np.array([1, 2, 3], dtype=np.int16))
+        assert_array_identical(s.arrays.b, np.array([4., 5., 6., 7.], dtype=np.float32))
+        assert_array_identical(s.arrays.c, np.array([np.complex64(1+2j), np.complex64(7+8j)]))
+        assert_array_identical(s.arrays.d, np.array(asbytes_nested(["cheese", "bacon", "spam"]), dtype=np.object))
 
     def test_arrays_replicated(self):
 

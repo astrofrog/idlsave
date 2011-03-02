@@ -257,6 +257,9 @@ def _read_structure(f, array_desc, struct_desc):
             else:
                 structure[col['name']][i] = _read_data(f, dtype)
 
+    if nrows == 1:
+        structure = structure[0]
+
     return structure
 
 
