@@ -1,7 +1,7 @@
 ; Create test IDL save files. To run:
 ; idl < make_test_files.pro
 
-; =========== SCALARS =========== 
+; =========== SCALARS ===========
 
 ; The types are listed here in the order of the IDL data type code
 
@@ -88,7 +88,7 @@ i64u = ulong64(18446744073709529285)
 
 save, i64u, filename='data/scalar_uint64.sav'
 
-; =========== ARRAYS =========== 
+; =========== ARRAYS ===========
 
 array1d = fltarr(123)
 save, array1d, filename='data/array_float32_1d.sav'
@@ -128,10 +128,54 @@ save,arrays,filename='data/struct_arrays.sav'
 arrays_rep = replicate(arrays, 5)
 save,arrays_rep,filename='data/struct_arrays_replicated.sav'
 
-c = { circle, x:1, y:2, r:3 }  
-fc = { filled_circle, c:4, INHERITS circle }  
+c = { circle, x:1, y:2, r:3 }
+fc = { filled_circle, c:4, INHERITS circle }
 save,fc,filename='data/struct_inherit.sav'
 
 ; =========== COMPRESSION ===========
 
 save, i8u, f32, c64, array5d, arrays, filename='data/various_compressed.sav', /compress
+
+; ======== POINTERS IN ARRAYS =======
+
+p = ptr_new(4.)
+
+array1d = replicate(p,123)
+save, array1d, filename='data/array_float32_pointer_1d.sav'
+
+array2d = replicate(p,12,22)
+save, array2d, filename='data/array_float32_pointer_2d.sav'
+
+array3d = replicate(p,12,22,11)
+save, array3d, filename='data/array_float32_pointer_3d.sav'
+
+array4d = replicate(p,7,8,5,4)
+save, array4d, filename='data/array_float32_pointer_4d.sav'
+
+array5d = replicate(p,5,6,4,3,4)
+save, array5d, filename='data/array_float32_pointer_5d.sav'
+
+array6d = replicate(p,4,3,5,4,6,3)
+save, array6d, filename='data/array_float32_pointer_6d.sav'
+
+array7d = replicate(p,2,3,4,3,2,1,2)
+save, array7d, filename='data/array_float32_pointer_7d.sav'
+
+array8d = replicate(p,4,5,3,2,1,2,3,4)
+save, array8d, filename='data/array_float32_pointer_8d.sav'
+
+; ====== POINTERS IN STRUCTURES ======
+
+pointers = {g:p, h:p}
+save,pointers,filename='data/struct_pointers.sav'
+
+pointers_rep = replicate(pointers, 5)
+save,pointers_rep,filename='data/struct_pointers_replicated.sav'
+
+arrays = {g:[p,p],h:[p,p,p]}
+save,arrays,filename='data/struct_pointer_arrays.sav'
+
+arrays_rep = replicate(arrays, 5)
+save,arrays_rep,filename='data/struct_pointer_arrays_replicated.sav'
+
+END
