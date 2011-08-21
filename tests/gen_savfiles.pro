@@ -122,11 +122,17 @@ save,scalars,filename='data/struct_scalars.sav'
 scalars_rep = replicate(scalars, 5)
 save,scalars_rep,filename='data/struct_scalars_replicated.sav'
 
+scalars_rep = replicate(scalars, 2, 3, 4)
+save,scalars_rep,filename='data/struct_scalars_replicated_3d.sav'
+
 arrays = {a:[1,2,3],b:[4.,5.,6.,7.],c:[complex(1.,2.),complex(7.,8.)], d:["cheese","bacon","spam"]}
 save,arrays,filename='data/struct_arrays.sav'
 
 arrays_rep = replicate(arrays, 5)
 save,arrays_rep,filename='data/struct_arrays_replicated.sav'
+
+arrays_rep = replicate(arrays, 2, 3, 4)
+save,arrays_rep,filename='data/struct_arrays_replicated_3d.sav'
 
 c = { circle, x:1, y:2, r:3 }
 fc = { filled_circle, c:4, INHERITS circle }
@@ -172,10 +178,16 @@ save,pointers,filename='data/struct_pointers.sav'
 pointers_rep = replicate(pointers, 5)
 save,pointers_rep,filename='data/struct_pointers_replicated.sav'
 
+pointers_rep = replicate(pointers, 2, 3, 4)
+save,pointers_rep,filename='data/struct_pointers_replicated_3d.sav'
+
 arrays = {g:[p,p],h:[p,p,p]}
 save,arrays,filename='data/struct_pointer_arrays.sav'
 
 arrays_rep = replicate(arrays, 5)
 save,arrays_rep,filename='data/struct_pointer_arrays_replicated.sav'
+
+arrays_rep = replicate(arrays, 2, 3, 4)
+save,arrays_rep,filename='data/struct_pointer_arrays_replicated_3d.sav'
 
 END
