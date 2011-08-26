@@ -169,6 +169,7 @@ def _read_string(f):
         _align_32(f)
         chars = asstr(chars)
     else:
+        warnings.warn("warning: empty strings are now set to '' instead of None")
         chars = ''
     return chars
 
@@ -181,6 +182,7 @@ def _read_string_data(f):
         string_data = _read_bytes(f, length)
         _align_32(f)
     else:
+        warnings.warn("warning: empty strings are now set to '' instead of None")
         string_data = ''
     return string_data
 
@@ -264,8 +266,9 @@ def _read_structure(f, array_desc, struct_desc):
             else:
                 structure[col['name']][i] = _read_data(f, dtype)
 
-    # Reshape array if needed
+    # Reshape structure if needed
     if array_desc['ndims'] > 1:
+        warnings.warn("warning: multi-dimensional structures are now correctly reshaped")
         dims = array_desc['dims'][:int(array_desc['ndims'])]
         dims.reverse()
         structure = structure.reshape(dims)

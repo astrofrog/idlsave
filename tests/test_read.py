@@ -1,4 +1,5 @@
 from os import path
+import warnings
 
 DATA_PATH = path.join(path.dirname(__file__), 'data')
 
@@ -8,6 +9,9 @@ from numpy.testing import assert_equal, assert_array_equal, run_module_suite
 from nose.tools import assert_true
 
 import idlsave
+
+warnings.filterwarnings('ignore', message="warning: multi-dimensional structures")
+warnings.filterwarnings('ignore', message="warning: empty strings")
 
 
 def object_array(*args):
