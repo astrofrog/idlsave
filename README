@@ -32,10 +32,19 @@ NOTES
   to 7, and up to 5Gb in size. However, it is possible that you encounter
   problems when parsing files, in which case Exceptions should be raised. If
   that is the case, please let me know by sending a report to
-  
-                      robitaille@users.sourceforge.net
+
+                      thomas.robitaille@gmail.com
 
   There are no plans to allow IDLSave to write out save files from python in
   the near future.
-    
+
+ACKNOWLEDGMENTS
+
+  Many thanks to Craig Markwardt for publishing the Unofficial Format
+  Specification for IDL .sav files, without which this Python module would
+  not exist.
+
+  Thanks to Christian Lupien for several patches, and for many users for
+  helping me to identify bugs
+
 IDL(r) is a registered trademark of ITT Visual Information Systems, Inc.
