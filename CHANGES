@@ -1,5 +1,21 @@
 CHANGES
 
+  Version 1.0.0
+
+    Final main stable release (any future releases will be bug-fixes only)
+    equivalent to scipy.io.idl in Scipy 0.10.1. Future development will take
+    place in scipy.io.idl.
+
+    - Improved compatibility with multi-dimensional structures
+
+    - Fix bugs related to pointers
+
+    - Backported bug and compatibility fixes from scipy.io.idl
+
+    - Added support for classes with inheritance
+
+    - Added support for object references
+
   Version 0.9.7
 
     The code has been aligned with scipy coding conventions. This version is
