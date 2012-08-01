@@ -35,3 +35,7 @@ body {
 	color: #515151;
 	text-align: justify;
 }
+
+code {
+    font-weight: bold;
+}
