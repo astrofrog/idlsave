@@ -18,7 +18,7 @@ setup(name='IDLSave',
       cmdclass={'build_py': build_py},
       keywords=['Scientific/Engineering'],
       classifiers=[
-                   "Development Status :: 4 - Beta",
+                   "Development Status :: 5 - Production/Stable",
                    "Programming Language :: Python",
                    "License :: OSI Approved :: MIT License",
                   ],
