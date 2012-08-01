@@ -1,10 +1,11 @@
 NOTE
 
-  IDLSave has now been merged into Scipy, and can be used as scipy.io.idl. See:
+  IDLSave has now been merged into Scipy, and can be used as
+  scipy.io.readsav. See:
 
     http://docs.scipy.org/doc/scipy/reference/generated/scipy.io.readsav.html
 
-  for more details. IDLSave 1.0.0 is equivalent to scipy.io.idl in Scipy 0.10.0
+  for more details. IDLSave 1.0.0 is equivalent to scipy.io in Scipy 0.10.1
 
 INTRODUCTION
 
