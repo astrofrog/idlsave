@@ -8,7 +8,7 @@ except ImportError:  # Python 2.x
     from distutils.command.build_py import build_py
 
 setup(name='IDLSave',
-      version='0.9.7',
+      version='1.0.0',
       description='IDLSave - a module to read IDL save files into Python',
       author='Thomas Robitaille',
       author_email='thomas.robitaille@gmail.com',
