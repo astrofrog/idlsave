@@ -190,4 +190,7 @@ save,arrays_rep,filename='data/struct_pointer_arrays_replicated.sav'
 arrays_rep = replicate(arrays, 2, 3, 4)
 save,arrays_rep,filename='data/struct_pointer_arrays_replicated_3d.sav'
 
+; ====== TAGS in sav file =====
+save, i8u, filename='data/scalar_byte_descr.sav', desc ='Test Description'
+
 END

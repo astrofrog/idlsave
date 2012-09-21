@@ -73,6 +73,7 @@ RECTYPE_DICT[15] = "HEAP_HEADER"
 RECTYPE_DICT[16] = "HEAP_DATA"
 RECTYPE_DICT[17] = "PROMOTE64"
 RECTYPE_DICT[19] = "NOTICE"
+RECTYPE_DICT[20] = "DESCRIPTION"
 
 # Define a dictionary to contain structure definitions
 STRUCT_DICT = {}
@@ -388,6 +389,10 @@ def _read_record(f):
     elif record['rectype'] == "NOTICE":
 
         record['notice'] = _read_string(f)
+
+    elif record['rectype'] == "DESCRIPTION":
+
+        record['description'] = _read_string_data(f)
 
     elif record['rectype'] == "HEAP_HEADER":
 
@@ -847,6 +852,13 @@ def read(file_name, idict=None, python_dict=False,
                 print "Author: %s" % record['author']
                 print "Title: %s" % record['title']
                 print "ID Code: %s" % record['idcode']
+                break
+
+        # Print out descriptions saved with the file
+        for record in records:
+            if record['rectype'] == "DESCRIPTION":
+                print "-"*50
+                print "Description: %s" % record['description']
                 break
 
         print "-"*50
