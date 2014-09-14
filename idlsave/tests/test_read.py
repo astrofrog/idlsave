@@ -8,7 +8,7 @@ from numpy.compat import asbytes_nested, asbytes
 from numpy.testing import assert_equal, assert_array_equal, run_module_suite
 from nose.tools import assert_true
 
-import idlsave
+from .. import idlsave
 
 warnings.filterwarnings('ignore', message="warning: multi-dimensional structures")
 warnings.filterwarnings('ignore', message="warning: empty strings")
