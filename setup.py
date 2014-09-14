@@ -2,11 +2,6 @@
 
 from distutils.core import setup
 
-try:  # Python 3.x
-    from distutils.command.build_py import build_py_2to3 as build_py
-except ImportError:  # Python 2.x
-    from distutils.command.build_py import build_py
-
 setup(name='IDLSave',
       version='1.0.0',
       description='IDLSave - a module to read IDL save files into Python',
@@ -15,7 +10,6 @@ setup(name='IDLSave',
       url='https://github.com/astrofrog/idlsave',
       packages=['idlsave'],
       provides=['idlsave'],
-      cmdclass={'build_py': build_py},
       keywords=['Scientific/Engineering'],
       classifiers=[
                    "Development Status :: 5 - Production/Stable",

@@ -1,0 +1,36 @@
+language: python
+
+python:
+    - 2.6
+    - 2.7
+    - 3.3
+    - 3.4
+
+before_install:
+
+    # Use utf8 encoding. Should be default, but this is insurance against
+    # future changes
+    - export PYTHONIOENCODING=UTF8
+    - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+    - chmod +x miniconda.sh
+    - ./miniconda.sh -b
+    - export PATH=/home/travis/miniconda/bin:$PATH
+    - conda update --yes conda
+
+install:
+
+    # CONDA
+    - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
+    - source activate test
+
+    # CORE DEPENDENCIES
+    - conda install --yes numpy nose pip coverage
+
+    # COVERAGE DEPENDENCIES
+    - pip install coveralls
+
+script:
+   - nosetests --with-coverage idlsave
+
+after_success:
+    - coveralls
