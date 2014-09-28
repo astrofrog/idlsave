@@ -1,5 +1,9 @@
 CHANGES
 
+  Version 1.0.1 (unreleased)
+
+    - Fix compatibility with null pointers
+
   Version 1.0.0
 
     Final main stable release (any future releases will be bug-fixes only)
