@@ -5,7 +5,7 @@ DATA_PATH = path.join(path.dirname(__file__), 'data')
 
 import numpy as np
 from numpy.compat import asbytes_nested, asbytes
-from numpy.testing import assert_equal, assert_array_equal, run_module_suite
+from numpy.testing import assert_equal, assert_array_equal
 from nose.tools import assert_true
 
 from .. import idlsave
@@ -397,6 +397,11 @@ class TestTags:
         assert_identical(s.i8u, np.uint8(234))
 
 
+def test_null_pointer():
+    """
 
-if __name__ == "__main__":
-    run_module_suite()
+    Regression test for null pointers.
+    """
+    s = idlsave.read(path.join(DATA_PATH, 'null_pointer.sav'), verbose=False)
+    assert_identical(s.point, None)
+    assert_identical(s.check, np.int16(5))
