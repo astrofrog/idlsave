@@ -341,19 +341,28 @@ def _read_record(f):
 
         rectypedesc = _read_typedesc(f)
 
-        varstart = _read_long(f)
-        if varstart != 7:
-            raise Exception("VARSTART is not 7")
+        if rectypedesc['typecode'] == 0:
 
-        if rectypedesc['structure']:
-            record['data'] = _read_structure(f, rectypedesc['array_desc'],
-                                          rectypedesc['struct_desc'])
-        elif rectypedesc['array']:
-            record['data'] = _read_array(f, rectypedesc['typecode'],
-                                      rectypedesc['array_desc'])
+            if nextrec == f.tell():
+                record['data'] = None  # Indicates NULL value
+            else:
+                raise ValueError("Unexpected type code: 0")
+
         else:
-            dtype = rectypedesc['typecode']
-            record['data'] = _read_data(f, dtype)
+
+            varstart = _read_long(f)
+            if varstart != 7:
+                raise Exception("VARSTART is not 7")
+
+            if rectypedesc['structure']:
+                record['data'] = _read_structure(f, rectypedesc['array_desc'],
+                                                    rectypedesc['struct_desc'])
+            elif rectypedesc['array']:
+                record['data'] = _read_array(f, rectypedesc['typecode'],
+                                                rectypedesc['array_desc'])
+            else:
+                dtype = rectypedesc['typecode']
+                record['data'] = _read_data(f, dtype)
 
     elif record['rectype'] == "TIMESTAMP":
 
